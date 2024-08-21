@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1 id="time-display">Time</h1>
+    <h1 id="word">Word</h1>
+
+    <input type="text" id="inputField" oninput="onInputEnter()">
+
+    <button onclick="start()">Start</button>
+
+    <h1 id="start-time-delay">Start Time</h1>
+
+
+    <div>
+        <h2>Words: <p id="words-display">0</p></h2>
+        <h2>WPM: <p id="wpm-display">0</p></h2>
+    </div>
+
+    <script src="./scripts/words.js"></script>
+    <script src="./scripts/game.js"></script>
+</body>
+</html>
