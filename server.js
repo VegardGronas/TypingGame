@@ -1,37 +1,60 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const words = require('an-array-of-english-words'); // Import the words list
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Serve static files (optional, for client-side files)
 app.use(express.static('public'));
 
-app.get('/words', (req, res) => {
-    const randomIndex = Math.floor(Math.random() * words.length);
-    const randomWord = words[randomIndex];
-    res.json(randomWord);
-});
+const players = {};
+const waitingPlayers = []; 
 
-// Handle Socket.IO connections
 io.on('connection', (socket) => {
     console.log('A user connected');
 
-    // Handle incoming messages
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', msg); // Broadcast the message to all clients
+    const userId = uuidv4();
+    players[socket.id] = { userId, points: 0, started: false, startTime: 0, currentWord: '' };
+
+    socket.emit('user id', userId);
+
+    socket.on('start game', () => {
+        waitingPlayers.push(socket.id);
+
+        if (waitingPlayers.length >= 2) {
+            const player1 = waitingPlayers.shift();
+            const player2 = waitingPlayers.shift();
+
+            io.to(player1).emit('game invitation', { opponentId: players[player2].userId });
+            io.to(player2).emit('game invitation', { opponentId: players[player1].userId });
+        }
     });
 
-    // Handle disconnection
+    socket.on('accept game', () => {
+        const player = players[socket.id];
+
+        if (player.started) return;
+
+        player.started = true;
+
+        const allPlayers = Object.values(players).filter(p => p.started);
+        if (allPlayers.length >= 2) {
+            allPlayers.forEach(p => {
+                io.to(p.userId).emit('game start', { players: allPlayers.map(p => p.userId) });
+            });
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected');
+        clearInterval(players[socket.id]?.timer);
+        delete players[socket.id];
+        io.emit('game state', players);
     });
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

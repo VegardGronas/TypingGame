@@ -2,37 +2,8 @@
 <html>
 <head>
     <title>Socket.IO Chat</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const socket = io();
-
-            const form = document.querySelector('form');
-            const input = document.querySelector('input');
-            const messages = document.querySelector('#messages');
-
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (input.value) {
-                    socket.emit('chat message', input.value);
-                    input.value = '';
-                }
-            });
-
-            socket.on('chat message', (msg) => {
-                const item = document.createElement('li');
-                item.textContent = msg;
-                messages.appendChild(item);
-                window.scrollTo(0, document.body.scrollHeight);
-            });
-        });
-    </script>
 </head>
 <body>
-    <a href="/development/wordGame.html">Other Page</a>
-    <ul id="messages"></ul>
-    <form action="">
-        <input autocomplete="off" /><button>Send</button>
-    </form>
+    <a href="/development/wordGame.html">sds</a>
 </body>
 </html>

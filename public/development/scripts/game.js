@@ -1,104 +1,75 @@
-const inputField = document.getElementById("inputField");
-const wordToWriteDisplay = document.getElementById("word");
-const timeDisplay = document.getElementById("time-display");
-const delayStartDisplay = document.getElementById("start-time-delay");
+document.addEventListener('DOMContentLoaded', () => {
+    const socket = io();
 
-const wordsDisplay = document.getElementById("words-display");
-const wpmDisplay = document.getElementById("wpm-display");
+    const inputField = document.getElementById("inputField");
+    const wordToWriteDisplay = document.getElementById("word");
+    const timeDisplay = document.getElementById("time-display");
+    const wordsDisplay = document.getElementById("words-display");
+    const wpmDisplay = document.getElementById("wpm-display");
+    const startButton = document.getElementById("startButton");
+    const playerIdDisplay = document.getElementById("player-id");
 
-let points = 0;
-let started = false;
-let startTime = 0;
-let currentTime = 0;
-let gameDuration = 60; // Game duration in seconds
-let delayStartTime = 2; // Delay start time in seconds
+    let userId;
+    let playerData = {};
 
-function start() {
-    points = 0;
-    startTime = new Date().getTime();
-    delayStart();
-}
+    socket.on('user id', (id) => {
+        userId = id;
+        playerIdDisplay.innerHTML = `Your ID: ${userId}`;
+    });
 
-function delayStart() {
-    if (started) return;
+    socket.on('game invitation', (data) => {
+        const accept = confirm(`Player ${data.opponentId} wants to start a game. Do you accept?`);
+        if (accept) {
+            socket.emit('accept game');
+        }
+    });
 
-    // Calculate elapsed time in milliseconds
-    const now = new Date().getTime();
-    const elapsedTime = (now - startTime) / 1000; // Convert to seconds
+    socket.on('game start', (data) => {
+        startGame();
+    });
 
-    // Format the result as MM:SS
-    const formattedTime = formatTime(elapsedTime);
-
-    console.log(elapsedTime);
-
-    delayStartDisplay.innerHTML = formattedTime;
-
-    if (elapsedTime >= delayStartTime) {
-        setRandomWord();
-        started = true;
-        startTime = new Date().getTime();
-        update();
-    } else {
-        requestAnimationFrame(delayStart);
+    function startGame() {
+        socket.emit('start game');
     }
-}
 
-function update() {
-    if (!started) return;
-
-    // Calculate elapsed time in milliseconds
-    const now = new Date().getTime();
-    currentTime = (now - startTime) / 1000; // Convert to seconds
-
-    // Format the result as MM:SS
-    const formattedTime = formatTime(currentTime);
-    timeDisplay.innerHTML = formattedTime;
-
-    const wpm = (points / (currentTime / 60)).toFixed(2);
-    wpmDisplay.innerHTML = wpm;
-
-    if (currentTime >= gameDuration) {
-        started = false;
-        // Optionally, you can add code here to handle end of game
-    } else {
-        requestAnimationFrame(update);
+    function onInputEnter() {
+        const inputValue = inputField.value.trim();
+        if (inputValue) {
+            socket.emit('input', inputValue);
+            inputField.value = "";
+        }
     }
-}
 
-function onInputEnter() {
-    if (!started) return;
+    function updateUI() {
+        if (!playerData.started) {
+            timeDisplay.innerHTML = formatTime(0);
+            wordsDisplay.innerHTML = '0 Words';
+            wpmDisplay.innerHTML = '0.00 WPM';
+            return;
+        }
 
-    // Access the value of the input field
-    const inputValue = inputField.value.trim();
-    const currentWord = word.innerHTML;
+        const elapsedTime = Math.floor((Date.now() - playerData.startTime) / 1000);
+        const formattedTime = formatTime(elapsedTime);
+        timeDisplay.innerHTML = formattedTime;
 
-    if (inputValue === currentWord) {
-        setRandomWord();
-        wordCompleted();
-        inputField.value = "";
+        const wpm = (playerData.points / (elapsedTime / 60)).toFixed(2);
+        wpmDisplay.innerHTML = `${wpm} WPM`;
+        wordsDisplay.innerHTML = `${playerData.points} Words`;
     }
-}
 
-function setRandomWord() {
-    fetch('/words')
-        .then(response => response.json())
-        .then(word => {
-            wordToWriteDisplay.innerHTML = word;
-        })
-        .catch(error => {
-            console.error('Error fetching word:', error);
-        });
-}
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
 
+    inputField.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            onInputEnter();
+        }
+    });
 
-function wordCompleted() {
-    points++;
-    wordsDisplay.innerHTML = points;
-    // Calculate WPM (Words Per Minute)
-}
-
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
+    startButton.addEventListener('click', () => {
+        startGame();
+    });
+});
